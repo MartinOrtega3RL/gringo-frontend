@@ -64,6 +64,9 @@ export const FormularioProducto = ({ abierto, producto, categorias, marcas, alCe
 
   useEffect(() => {
     if (!abierto) return
+    // Un guardado exitoso deja el formulario montado: sin esto, la proxima vez que
+    // se abre sigue con los botones trabados.
+    setGuardando(false)
     setDatos(producto ? desdeProducto(producto) : VACIO)
     setErrores({})
     setError(null)

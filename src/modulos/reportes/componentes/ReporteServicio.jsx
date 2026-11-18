@@ -69,7 +69,8 @@ export const ReporteServicio = () => {
         <h3 className="font-[family-name:var(--font-cartel)] text-lg uppercase tracking-tight">
           Órdenes ingresadas por estado
         </h3>
-        <table className="mt-4 w-full text-sm">
+        <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-sm">
           <thead>
             <tr className="texto-suave border-b-2 border-crema/20 text-[10px] font-bold uppercase tracking-[0.16em] text-crema/60">
               <th className="py-2 text-left">Estado</th>
@@ -89,6 +90,7 @@ export const ReporteServicio = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       {datos.noRetiradas.length > 0 && (

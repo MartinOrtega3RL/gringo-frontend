@@ -17,7 +17,9 @@ const TIPOS_DOCUMENTO = ['CUIT', 'DNI', 'CUIL', 'PASAPORTE', 'OTRO'].map((valor)
 const VACIO = {
   apellidoNombre: '',
   tipoPersona: 'JURIDICA',
-  tipoDocumento: 'CUIT',
+  // Sin documento de inicio: el unico dato obligatorio es el nombre. Con CUIT
+  // de fabrica, dejar el numero vacio impedia guardar.
+  tipoDocumento: '',
   numeroDocumento: '',
   telefonoWhatsapp: '',
   correo: '',
@@ -38,7 +40,9 @@ const desdeProveedor = (proveedor) => ({
   observaciones: proveedor.observaciones ?? '',
 })
 
-export const FormularioProveedor = ({ abierto, proveedor, alCerrar, alGuardar }) => {
+// `inicial` precarga un alta con lo que ya se sabe, por ejemplo el nombre y el
+// CUIT que leyó el OCR de una factura. Se ignora al editar un proveedor.
+export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alGuardar }) => {
   const [datos, setDatos] = useState(VACIO)
   const [errores, setErrores] = useState({})
   const [error, setError] = useState(null)
@@ -46,10 +50,13 @@ export const FormularioProveedor = ({ abierto, proveedor, alCerrar, alGuardar })
 
   useEffect(() => {
     if (!abierto) return
-    setDatos(proveedor ? desdeProveedor(proveedor) : VACIO)
+    // Un guardado exitoso deja el formulario montado: sin esto, la proxima vez que
+    // se abre sigue con los botones trabados.
+    setGuardando(false)
+    setDatos(proveedor ? desdeProveedor(proveedor) : { ...VACIO, ...inicial })
     setErrores({})
     setError(null)
-  }, [abierto, proveedor])
+  }, [abierto, proveedor, inicial])
 
   const cambiar = (clave) => (evento) => {
     setDatos((previos) => ({ ...previos, [clave]: evento.target.value }))

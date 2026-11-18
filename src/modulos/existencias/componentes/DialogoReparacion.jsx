@@ -22,6 +22,9 @@ export const DialogoReparacion = ({ abierto, alCerrar, alRegistrar }) => {
 
   useEffect(() => {
     if (abierto) return
+    // Un guardado exitoso deja el dialogo montado: sin esto, la proxima vez que
+    // se abre sigue con los botones trabados.
+    setTrabajando(false)
     setProducto(null)
     setCantidad('1')
     setMotivo('')

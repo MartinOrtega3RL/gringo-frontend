@@ -45,6 +45,9 @@ export const FormularioCliente = ({ abierto, cliente, tipos, alCerrar, alGuardar
 
   useEffect(() => {
     if (!abierto) return
+    // Un guardado exitoso deja el formulario montado: sin esto, la proxima vez que
+    // se abre sigue con los botones trabados.
+    setGuardando(false)
     setDatos(cliente ? desdeCliente(cliente) : { ...VACIO, idTipoCliente: String(tipos[0]?.idTipoCliente ?? '') })
     setErrores({})
     setError(null)

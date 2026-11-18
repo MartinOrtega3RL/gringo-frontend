@@ -144,7 +144,7 @@ export const ReporteInventario = () => {
                       <td className="numeral py-2.5 text-right">{item.stockActual}</td>
                       <td className="numeral py-2.5 text-right">{item.stockMinimo}</td>
                       <td className="py-2.5 text-right">
-                        <Marca tono="alerta">-{item.faltante}</Marca>
+                        <Marca tono="alerta">{item.faltante > 0 ? `-${item.faltante}` : item.faltante}</Marca>
                       </td>
                     </tr>
                   ))}

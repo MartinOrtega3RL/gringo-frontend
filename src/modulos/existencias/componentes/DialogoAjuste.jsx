@@ -21,6 +21,9 @@ export const DialogoAjuste = ({ abierto, alCerrar, alRegistrar }) => {
 
   useEffect(() => {
     if (abierto) return
+    // Un guardado exitoso deja el dialogo montado: sin esto, la proxima vez que
+    // se abre sigue con los botones trabados.
+    setTrabajando(false)
     setProducto(null)
     setCantidad('')
     setMotivo('')
