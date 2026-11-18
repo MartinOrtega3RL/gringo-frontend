@@ -119,6 +119,7 @@ export const MatrizPermisos = () => {
     <div className="grid gap-5">
       <p className="border-l-2 border-ambar ps-3 text-xs leading-relaxed text-crema/75">
         Los usuarios con sesión abierta ven los menús nuevos al volver a entrar, pero el servidor aplica el cambio en el acto.
+        Soporte no tiene acceso a los módulos del negocio: esos datos son del titular.
       </p>
 
       {aviso && <Aviso tono={aviso.tono}>{aviso.texto}</Aviso>}

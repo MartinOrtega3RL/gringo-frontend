@@ -12,10 +12,11 @@ export const Ingreso = () => {
 
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
+  const [ayudaOlvido, setAyudaOlvido] = useState(false)
   const [error, setError] = useState(null)
   const [enviando, setEnviando] = useState(false)
 
-  if (usuario && !rehidratando) return <Navigate to="/venta" replace />
+  if (usuario && !rehidratando) return <Navigate to="/" replace />
 
   const enviar = async (evento) => {
     evento.preventDefault()
@@ -24,7 +25,7 @@ export const Ingreso = () => {
 
     try {
       await ingresar({ nombreUsuario: nombreUsuario.trim(), contrasena })
-      navegar('/venta', { replace: true })
+      navegar('/', { replace: true })
     } catch (fallo) {
       setError(fallo.message)
       setContrasena('')
@@ -61,7 +62,7 @@ export const Ingreso = () => {
           />
 
           <Campo
-            etiqueta="Contrasena"
+            etiqueta="Contraseña"
             name="contrasena"
             type="password"
             autoComplete="current-password"
@@ -83,6 +84,30 @@ export const Ingreso = () => {
             {enviando ? 'Entrando' : 'Entrar'}
           </Boton>
         </form>
+
+        {/* La contraseña no se recupera: no hay correo y nadie la conoce, ni
+            el sistema. Se restablece, y quien la restablece depende de quién
+            sea el que se la olvidó. */}
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => setAyudaOlvido((previo) => !previo)}
+            aria-expanded={ayudaOlvido}
+            className="text-sm font-semibold text-crema/75 underline underline-offset-4 hover:text-crema"
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+          {ayudaOlvido && (
+            <div className="mt-3 grid gap-2 border-2 border-crema/20 bg-azul-hondo px-4 py-3 text-sm leading-relaxed text-crema/80">
+              <p>
+                Pedile al <strong className="text-crema">administrador del local</strong> que te la restablezca
+                desde <strong className="text-crema">Usuarios</strong>. Te va a dar una contraseña provisoria.
+              </p>
+              <p>Entrá con esa y cambiala enseguida en <strong className="text-crema">Mi cuenta</strong>.</p>
+              <p className="text-crema/60">Si sos el administrador, pedíselo al soporte del sistema.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

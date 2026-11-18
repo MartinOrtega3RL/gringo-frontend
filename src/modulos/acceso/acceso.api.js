@@ -14,5 +14,8 @@ export const modificarUsuario = (idUsuario, datos) => api.modificar(`/usuarios/$
 /** RF02.3 — baja LOGICA. Conserva el registro de operaciones del usuario. */
 export const darDeBajaUsuario = (idUsuario) => api.borrar(`/usuarios/${idUsuario}`)
 
+/** RF02.2 — contraseña provisoria para quien se olvidó la suya. Se ve una sola vez. */
+export const restablecerContrasena = (idUsuario) => api.enviar(`/usuarios/${idUsuario}/contrasena`)
+
 /** RF02.4 — perfiles disponibles para asignar. */
 export const listarPerfiles = () => api.obtener('/usuarios/perfiles')

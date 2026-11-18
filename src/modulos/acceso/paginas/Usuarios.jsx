@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useListadoPaginado } from '../../../ganchos/useListadoPaginado.js'
 import {
-  listarUsuarios, listarPerfiles, registrarUsuario, modificarUsuario, darDeBajaUsuario,
+  listarUsuarios, listarPerfiles, registrarUsuario, modificarUsuario, darDeBajaUsuario, restablecerContrasena,
 } from '../acceso.api.js'
 import { FormularioUsuario } from '../componentes/FormularioUsuario.jsx'
 import { Paginacion } from '../../catalogo/componentes/Paginacion.jsx'
@@ -9,8 +9,8 @@ import { Encabezado } from '../../../ui/Panel.jsx'
 import { Boton } from '../../../ui/Boton.jsx'
 import { Listado, Fila, AccionFila, Marca } from '../../../ui/Listado.jsx'
 import { Cargando, Vacio, Fallo } from '../../../ui/Estados.jsx'
-import { Confirmar } from '../../../ui/Dialogo.jsx'
-import { IconoMas, IconoEditar, IconoQuitar } from '../../../ui/Iconos.jsx'
+import { Confirmar, Dialogo } from '../../../ui/Dialogo.jsx'
+import { IconoMas, IconoEditar, IconoQuitar, IconoCandado } from '../../../ui/Iconos.jsx'
 import { useSesion } from '../../../app/sesion.jsx'
 
 // RF02 — administración de usuarios. Módulo exclusivo del Administrador.
@@ -24,6 +24,11 @@ export const Usuarios = () => {
   const [editando, setEditando] = useState(null)
   const [borrando, setBorrando] = useState(null)
   const [trabajando, setTrabajando] = useState(false)
+  // RF02.2 — a quién se le restablece la contraseña, y la provisoria que devolvió
+  // el servidor. Se muestra una sola vez: al cerrar el diálogo se pierde.
+  const [restableciendo, setRestableciendo] = useState(null)
+  const [provisoria, setProvisoria] = useState(null)
+  const [errorRestablecer, setErrorRestablecer] = useState(null)
   // La baja es logica: el usuario sigue en la nomina, atenuado y con su marca,
   // porque sus ventas y movimientos quedan a su nombre. Este filtro deja
   // esconderlos, que es lo que se espera al mirar "quien puede entrar hoy".
@@ -49,6 +54,20 @@ export const Usuarios = () => {
       await darDeBajaUsuario(borrando.idUsuario)
       setBorrando(null)
       listado.recargar()
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  const confirmarRestablecer = async () => {
+    setTrabajando(true)
+    setErrorRestablecer(null)
+    try {
+      const { datos } = await restablecerContrasena(restableciendo.idUsuario)
+      setProvisoria({ usuario: restableciendo, contrasena: datos.contrasenaProvisoria })
+      setRestableciendo(null)
+    } catch (fallo) {
+      setErrorRestablecer(fallo.message)
     } finally {
       setTrabajando(false)
     }
@@ -133,6 +152,12 @@ export const Usuarios = () => {
                         <AccionFila etiqueta="Editar" onClick={() => setEditando(fila)}>
                           <IconoEditar className="size-4" />
                         </AccionFila>
+                        {/* La propia se cambia en «Mi cuenta», sabiendo la actual. */}
+                        {!esPropio && fila.activo && (
+                          <AccionFila etiqueta="Restablecer la contraseña" onClick={() => { setErrorRestablecer(null); setRestableciendo(fila) }}>
+                            <IconoCandado className="size-4" />
+                          </AccionFila>
+                        )}
                         <AccionFila
                           etiqueta={esPropio ? 'No podés darte de baja a vos mismo' : 'Dar de baja'}
                           peligrosa
@@ -173,6 +198,43 @@ export const Usuarios = () => {
         detalle={`${borrando?.persona?.apellidoNombre ?? ''} no va a poder iniciar sesión, pero las ventas y los movimientos que registró se conservan a su nombre.`}
         textoAccion="Dar de baja"
       />
+
+      <Confirmar
+        abierto={restableciendo !== null}
+        alCerrar={() => setRestableciendo(null)}
+        alConfirmar={confirmarRestablecer}
+        trabajando={trabajando}
+        titulo="Restablecer la contraseña"
+        detalle={`Se genera una contraseña provisoria para ${restableciendo?.persona?.apellidoNombre ?? ''} y se cierran las sesiones que tenga abiertas. La actual deja de servir.${errorRestablecer ? ` ${errorRestablecer}` : ''}`}
+        textoAccion="Restablecer"
+      />
+
+      {/* La provisoria se ve una sola vez: no queda guardada en claro en ningún
+          lado, ni en el sistema ni en la bitácora. */}
+      <Dialogo
+        abierto={provisoria !== null}
+        alCerrar={() => setProvisoria(null)}
+        titulo="Contraseña provisoria"
+        descripcion={`Dásela a ${provisoria?.usuario?.persona?.apellidoNombre ?? ''}. Esta es la única vez que se muestra.`}
+        ancho="max-w-md"
+        pie={
+          <div className="flex justify-end">
+            <Boton onClick={() => setProvisoria(null)}>Listo, ya la anoté</Boton>
+          </div>
+        }
+      >
+        <div className="grid gap-3">
+          <p className="text-sm text-crema/70">
+            Usuario: <strong className="text-crema">{provisoria?.usuario?.nombreUsuario}</strong>
+          </p>
+          <p className="numeral select-all border-2 border-crema bg-crema px-4 py-3 text-center text-2xl font-bold tracking-[0.12em] text-tinta">
+            {provisoria?.contrasena}
+          </p>
+          <p className="text-sm leading-relaxed text-crema/70">
+            Que entre con esta contraseña y la cambie enseguida en «Mi cuenta».
+          </p>
+        </div>
+      </Dialogo>
     </div>
   )
 }

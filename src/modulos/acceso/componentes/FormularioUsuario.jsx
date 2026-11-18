@@ -23,6 +23,9 @@ export const FormularioUsuario = ({ abierto, usuario, perfiles, alCerrar, alGuar
 
   useEffect(() => {
     if (!abierto) return
+    // Un guardado exitoso deja el formulario montado: sin esto, la proxima vez que
+    // se abre sigue con los botones trabados.
+    setGuardando(false)
     setDatos(
       usuario
         ? {
