@@ -171,3 +171,13 @@
   size: A4;
   margin: 16mm;
 }
+
+/* En el celular, un bloque de reporte con una tabla ancha no puede ensanchar la
+   pagina: las celdas de una grilla no se achican por debajo de su contenido
+   salvo que se les diga. La tabla desplaza por su cuenta. */
+.reporte-imprimible,
+.reporte-imprimible > *,
+.bloque-reporte {
+  min-width: 0;
+}
+

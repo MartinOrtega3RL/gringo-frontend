@@ -77,6 +77,8 @@ const Inicio = () => {
   if (puedeLeer('SERVICIO_TECNICO')) return <Navigate to="/servicio" replace />
   if (puedeLeer('CATALOGO_STOCK')) return <Navigate to="/productos" replace />
   if (puedeLeer('CLIENTES_PROV')) return <Navigate to="/clientes" replace />
+  // Soporte no tiene el negocio: su pantalla es la de usuarios.
+  if (puedeLeer('ADMIN_SEGURIDAD')) return <Navigate to="/usuarios" replace />
   return <Navigate to="/mi-cuenta" replace />
 }
 

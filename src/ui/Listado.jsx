@@ -4,7 +4,7 @@
 // descarto (H16). El orden lo dan la tipografia y el espacio, no las rayas.
 
 export const Listado = ({ children, className = '' }) => (
-  <ul className={`border-2 border-black bg-azul-hondo ${className}`}>{children}</ul>
+  <ul className={`min-w-0 border-2 border-black bg-azul-hondo ${className}`}>{children}</ul>
 )
 
 /**

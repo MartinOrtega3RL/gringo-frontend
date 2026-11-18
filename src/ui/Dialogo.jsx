@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Titulo, Filete } from './Panel.jsx'
 import { Boton } from './Boton.jsx'
 
@@ -6,6 +7,10 @@ import { Boton } from './Boton.jsx'
 // de foco, el cierre con Escape, el fondo inerte y la devolucion del foco al
 // control que lo abrio. Reimplementar todo eso a mano es como se rompe la
 // navegacion por teclado sin que nadie lo note.
+//
+// Se dibuja en <body> y no donde se usa: un dialogo con su propio formulario
+// (el alta de un cliente) suele abrirse desde adentro de otro formulario (la
+// recepcion de un equipo), y un <form> dentro de otro no es HTML valido.
 
 export const Dialogo = ({ abierto, alCerrar, titulo, descripcion, ancho = 'max-w-lg', children, pie }) => {
   const dialogo = useRef(null)
@@ -18,7 +23,7 @@ export const Dialogo = ({ abierto, alCerrar, titulo, descripcion, ancho = 'max-w
     if (!abierto && nodo.open) nodo.close()
   }, [abierto])
 
-  return (
+  return createPortal(
     <dialog
       ref={dialogo}
       onCancel={(evento) => {
@@ -28,6 +33,10 @@ export const Dialogo = ({ abierto, alCerrar, titulo, descripcion, ancho = 'max-w
       // Clic en el fondo: solo cuenta si el objetivo es el dialogo mismo y no
       // algo de adentro, para que arrastrar un texto hasta el borde no cierre.
       onClick={(evento) => evento.target === dialogo.current && alCerrar()}
+      // React propaga los eventos por el arbol de componentes aunque el DOM
+      // este en otro lado: sin esto, guardar el formulario del dialogo tambien
+      // enviaria el formulario de la pantalla que lo abrio.
+      onSubmit={(evento) => evento.stopPropagation()}
       className={`w-[min(92vw,var(--ancho))] border-2 border-black bg-azul-hondo p-0 text-crema backdrop:bg-azul/80 ${ancho}`}
       style={{ '--ancho': '32rem' }}
     >
@@ -42,7 +51,8 @@ export const Dialogo = ({ abierto, alCerrar, titulo, descripcion, ancho = 'max-w
       <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
 
       {pie && <div className="border-t-2 border-crema/12 px-5 py-4">{pie}</div>}
-    </dialog>
+    </dialog>,
+    document.body,
   )
 }
 
