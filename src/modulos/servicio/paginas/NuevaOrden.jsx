@@ -2,16 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { recepcionarEquipo, consultarDispositivo, subirFoto } from '../servicio.api.js'
 import { listarMarcas, listarModelos } from '../../catalogo/catalogo.api.js'
-import { SELLOS } from '../servicio.reglas.js'
+import {
+  SELLOS, fallaDesbloqueo, resumenDesbloqueo, ATAJOS_ESTADO, ATAJOS_ACCESORIOS, alternarAtajo, tieneAtajo,
+} from '../servicio.reglas.js'
 import { ElegirCliente } from '../componentes/ElegirCliente.jsx'
 import { ConsultaEquipo } from '../componentes/ConsultaEquipo.jsx'
+import { CargarDesbloqueo } from '../componentes/Desbloqueo.jsx'
 import { Encabezado, Titulo } from '../../../ui/Panel.jsx'
 import { Boton } from '../../../ui/Boton.jsx'
 import { Select, Texto, Area, Par } from '../../../ui/Formulario.jsx'
 import { Aviso } from '../../../ui/Estados.jsx'
 import { IconoFoto, IconoQuitar, IconoTilde, IconoFlecha } from '../../../ui/Iconos.jsx'
 
-// RF21.1 a RF21.8 — recepción del equipo.
+// RF21.1 a RF21.8 y RF21.10 — recepción del equipo.
 //
 // Es la pantalla que reemplaza la ficha de papel: "hacemos una ficha para cada
 // dispositivo y para cada cliente" (H05). Y es donde se deja constancia de cómo
@@ -75,6 +78,32 @@ const Paso = ({ numero, titulo, situacion, resumen, alCambiar, children }) => {
   )
 }
 
+/**
+ * Las casillas de la ficha de papel, como botones que escriben en el campo de
+ * texto. Lo marcado se ve en el texto, y el texto se puede seguir editando.
+ */
+const Atajos = ({ rotulo, opciones, texto, alCambiar, deshabilitado }) => (
+  <div role="group" aria-label={rotulo} className="-mt-2 flex flex-wrap gap-1.5">
+    {opciones.map((opcion) => {
+      const marcada = tieneAtajo(texto, opcion.texto)
+      return (
+        <button
+          key={opcion.texto}
+          type="button"
+          aria-pressed={marcada}
+          disabled={deshabilitado}
+          onClick={() => alCambiar(alternarAtajo(texto, opcion))}
+          className={`border-2 px-2.5 py-1 text-xs font-semibold transition-colors ${
+            marcada ? 'border-crema bg-crema text-tinta' : 'border-crema/25 text-crema/70 hover:border-crema/55'
+          }`}
+        >
+          {opcion.texto}
+        </button>
+      )
+    })}
+  </div>
+)
+
 /** Una fila del resumen final, en el papel de la ficha. */
 const Linea = ({ rotulo, children }) => (
   <div className="grid gap-0.5 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-4">
@@ -95,6 +124,7 @@ export const NuevaOrden = () => {
   const [sugeridos, setSugeridos] = useState([])
   const [imei, setImei] = useState('')
   const [color, setColor] = useState('')
+  const [desbloqueo, setDesbloqueo] = useState(null)
   const [falla, setFalla] = useState('')
   const [estadoIngreso, setEstadoIngreso] = useState('')
   const [accesorios, setAccesorios] = useState('')
@@ -213,6 +243,8 @@ export const NuevaOrden = () => {
       if (!idMarca) fallos.marca = 'Elegí la marca.'
       if (modelo.trim().length < 2) fallos.modelo = 'Escribí el modelo.'
       if (imei.trim() && !IMEI_VALIDO.test(imei.trim())) fallos.imei = 'Tiene entre 5 y 30 letras o números.'
+      const desbloqueoMal = fallaDesbloqueo(desbloqueo)
+      if (desbloqueoMal) fallos.desbloqueo = desbloqueoMal
     }
     if (numero === 2) {
       if (falla.trim().length < 3) fallos.falla = 'Anotá lo que dice el cliente que le pasa.'
@@ -260,6 +292,7 @@ export const NuevaOrden = () => {
         estadoIngreso: estadoIngreso.trim(),
         accesoriosRecibidos: accesorios.trim() || null,
         estadoSellos: sellos,
+        desbloqueo: desbloqueo && { tipo: desbloqueo.tipo, valor: desbloqueo.tipo === 'PIN' ? desbloqueo.valor.trim() : desbloqueo.valor },
         idOrdenAnterior: vincular && consulta?.garantia?.vigente ? consulta.ordenConGarantia.idOrden : null,
       })
 
@@ -400,6 +433,13 @@ export const NuevaOrden = () => {
               <Texto etiqueta="Color" value={color} onChange={(e) => setColor(e.target.value)} maxLength={30} disabled={enviando} />
             </Par>
 
+            <CargarDesbloqueo
+              valor={desbloqueo}
+              alCambiar={(nuevo) => { setDesbloqueo(nuevo); setErrores((e) => ({ ...e, desbloqueo: undefined })) }}
+              error={errores.desbloqueo}
+              deshabilitado={enviando}
+            />
+
             <ConsultaEquipo consulta={consulta} vincular={vincular} alVincular={setVincular} />
             {pie}
           </Paso>
@@ -440,6 +480,13 @@ export const NuevaOrden = () => {
               disabled={enviando}
               placeholder="Rayón en la tapa, marco abollado, enciende y se ve la imagen…"
             />
+            <Atajos
+              rotulo="Estado al ingresar, opciones rápidas"
+              opciones={ATAJOS_ESTADO}
+              texto={estadoIngreso}
+              alCambiar={(nuevo) => { setEstadoIngreso(nuevo); setErrores((e) => ({ ...e, estadoIngreso: undefined })) }}
+              deshabilitado={enviando}
+            />
 
             <Texto
               etiqueta="Accesorios que deja"
@@ -448,6 +495,13 @@ export const NuevaOrden = () => {
               maxLength={300}
               disabled={enviando}
               placeholder="Funda, cargador, chip…"
+            />
+            <Atajos
+              rotulo="Accesorios, opciones rápidas"
+              opciones={ATAJOS_ACCESORIOS}
+              texto={accesorios}
+              alCambiar={setAccesorios}
+              deshabilitado={enviando}
             />
 
             {/* RF21.8 — lo que anula la garantía es el estado del sello al volver,
@@ -531,6 +585,7 @@ export const NuevaOrden = () => {
               <dl className="grid gap-2.5">
                 <Linea rotulo="Cliente">{resumenCliente}</Linea>
                 <Linea rotulo="Equipo">{resumenEquipo}</Linea>
+                <Linea rotulo="Desbloqueo">{resumenDesbloqueo(desbloqueo)}</Linea>
                 <Linea rotulo="Falla declarada">{falla.trim()}</Linea>
                 <Linea rotulo="Cómo llega">{estadoIngreso.trim()}</Linea>
                 <Linea rotulo="Accesorios">{accesorios.trim() || 'Ninguno'}</Linea>

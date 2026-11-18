@@ -10,6 +10,7 @@ import { RecorridoOrden } from '../componentes/RecorridoOrden.jsx'
 import { PanelProceso } from '../componentes/PanelProceso.jsx'
 import { PanelReparacion } from '../componentes/PanelReparacion.jsx'
 import { GaleriaFotos } from '../componentes/GaleriaFotos.jsx'
+import { VerDesbloqueo } from '../componentes/Desbloqueo.jsx'
 import { LineaDeTiempo } from '../componentes/LineaDeTiempo.jsx'
 import { Encabezado, Titulo, Precio } from '../../../ui/Panel.jsx'
 import { Boton } from '../../../ui/Boton.jsx'
@@ -229,6 +230,9 @@ export const FichaOrden = () => {
                 {SELLOS[orden.estadoSellos]}
                 {orden.estadoSellos === 'VIOLADOS' && <span className="block text-xs font-normal text-escarlata">Anulan la garantía anterior</span>}
               </Dato>
+              <Dato rotulo="Desbloqueo">
+                <VerDesbloqueo desbloqueo={orden.desbloqueo} cerrada={orden.estado.esFinal} />
+              </Dato>
             </dl>
 
             {/* RF24.3 — si es un reingreso, de que reparacion viene y como estaba
@@ -275,6 +279,7 @@ export const FichaOrden = () => {
               <dl className="grid gap-1.5 text-sm">
                 {Number(liq.presupuesto) > 0 && <Cuenta rotulo="Presupuesto" monto={liq.presupuesto} />}
                 {Number(liq.repuestos) > 0 && <Cuenta rotulo="Repuestos" monto={liq.repuestos} />}
+                {Number(liq.bonificacion) > 0 && <Cuenta rotulo="Sin cargo: garantía" monto={liq.bonificacion} resta />}
                 {Number(liq.recargo) > 0 && (
                   <Cuenta rotulo={`Recargo por demora (${orden.reglas.recargoPct}%)`} monto={liq.recargo} />
                 )}
@@ -290,7 +295,12 @@ export const FichaOrden = () => {
             {!liq.definitiva && Number(liq.total) > 0 && (
               <p className="text-xs leading-relaxed text-crema/55">Se cobra al entregar el equipo.</p>
             )}
-            {liq.definitiva && Number(liq.total) === 0 && (
+            {Number(liq.bonificacion) > 0 && (
+              <p className="text-xs leading-relaxed text-crema/55">
+                Volvió con la garantía vigente: la reparación no se cobra.
+              </p>
+            )}
+            {liq.definitiva && Number(liq.total) === 0 && Number(liq.bonificacion) === 0 && (
               <p className="text-xs leading-relaxed text-crema/55">No se reparó: no hay nada que cobrar.</p>
             )}
           </section>
@@ -359,9 +369,12 @@ export const FichaOrden = () => {
   )
 }
 
-const Cuenta = ({ rotulo, monto }) => (
+const Cuenta = ({ rotulo, monto, resta = false }) => (
   <div className="flex items-baseline justify-between gap-3">
     <dt className="text-crema/75">{rotulo}</dt>
-    <dd><Precio monto={monto} tamano="text-lg" /></dd>
+    <dd>
+      {resta && <span className="numeral text-lg text-ambar">−</span>}
+      <Precio monto={monto} tamano="text-lg" />
+    </dd>
   </div>
 )

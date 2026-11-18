@@ -33,6 +33,8 @@ export const DialogoEntrega = ({ abierto, orden, alCerrar, alEntregar }) => {
   const { liquidacion, noRetirada, diasDesdeNotificacion, reglas } = orden
   const reparado = orden.historial.some((paso) => paso.estado.codigo === 'REPARADO')
   const conRecargo = Number(liquidacion.recargo) > 0
+  // H07 / S14 — si volvió con la garantía vigente, la reparación no se cobra.
+  const bonificada = Number(liquidacion.bonificacion) > 0
 
   const enviar = async (evento) => {
     evento.preventDefault()
@@ -73,7 +75,18 @@ export const DialogoEntrega = ({ abierto, orden, alCerrar, alEntregar }) => {
         <div className="grid gap-1 border-2 border-crema/25 bg-crema/5 px-4 py-3">
           {reparado ? (
             <>
-              <Linea texto="Presupuesto y repuestos" monto={liquidacion.reparacion} />
+              <Linea
+                texto="Presupuesto y repuestos"
+                monto={Number(liquidacion.reparacion) + Number(liquidacion.bonificacion)}
+              />
+              {bonificada && (
+                <div>
+                  <Linea texto="Sin cargo: garantía" monto={liquidacion.bonificacion} resta />
+                  <p className="mt-0.5 text-xs leading-relaxed text-crema/60">
+                    El equipo volvió con la garantía vigente: la reparación no se cobra.
+                  </p>
+                </div>
+              )}
               {conRecargo && (
                 <div>
                   <Linea texto="Recargo por demora" monto={liquidacion.recargo} />
@@ -148,9 +161,12 @@ export const DialogoEntrega = ({ abierto, orden, alCerrar, alEntregar }) => {
   )
 }
 
-const Linea = ({ texto, monto }) => (
+const Linea = ({ texto, monto, resta = false }) => (
   <div className="flex items-baseline justify-between gap-3">
     <span className="text-sm text-crema/85">{texto}</span>
-    <Precio monto={monto} tamano="text-lg" />
+    <span>
+      {resta && <span className="numeral text-lg text-ambar">−</span>}
+      <Precio monto={monto} tamano="text-lg" />
+    </span>
   </div>
 )

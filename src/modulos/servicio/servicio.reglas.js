@@ -3,6 +3,72 @@
 // `orden.cambios`. Repetir esa tabla en el navegador seria dos lugares que
 // pueden discrepar, y el que gana siempre es el que no se actualizo.
 
+/**
+ * RF21.10 — lo que impide seguir con el desbloqueo cargado, o null si está bien.
+ * Las mismas reglas que valida el servidor: PIN de 4 a 16 letras o números,
+ * patrón de 4 a 9 puntos distintos. Sin código no hay nada que revisar.
+ */
+export const fallaDesbloqueo = (desbloqueo) => {
+  if (!desbloqueo) return null
+  if (desbloqueo.tipo === 'PIN') {
+    return /^[A-Za-z0-9]{4,16}$/.test(desbloqueo.valor.trim())
+      ? null
+      : 'Entre 4 y 16 letras o números, sin espacios.'
+  }
+  return desbloqueo.valor.length >= 4 ? null : 'Uní al menos 4 puntos.'
+}
+
+/** El resumen de la recepción: dice qué se cargó sin mostrar el código. */
+export const resumenDesbloqueo = (desbloqueo) => {
+  if (!desbloqueo) return 'No dejó código'
+  return desbloqueo.tipo === 'PATRON'
+    ? `Patrón de ${desbloqueo.valor.length} puntos`
+    : 'PIN o contraseña cargado'
+}
+
+// --- Atajos de la recepción (RF21.4 y RF21.6) ------------------------------------
+
+// Las casillas de la ficha de papel (Anexo II). No reemplazan al texto libre:
+// lo completan. Cada opción puede tener su contraria, que se quita al marcarla.
+export const ATAJOS_ESTADO = [
+  { texto: 'Enciende', contraria: 'No enciende' },
+  { texto: 'No enciende', contraria: 'Enciende' },
+  { texto: 'Pantalla rota' },
+  { texto: 'Táctil OK', contraria: 'Táctil falla' },
+  { texto: 'Táctil falla', contraria: 'Táctil OK' },
+  { texto: 'Cámara OK', contraria: 'Cámara falla' },
+  { texto: 'Cámara falla', contraria: 'Cámara OK' },
+  { texto: 'Humedad' },
+  { texto: 'Golpes' },
+  { texto: 'Abierto previamente' },
+]
+
+export const ATAJOS_ACCESORIOS = [
+  { texto: 'Cargador' },
+  { texto: 'Cable' },
+  { texto: 'SIM' },
+  { texto: 'SD' },
+  { texto: 'Funda' },
+]
+
+const partes = (texto) => texto.split(',').map((parte) => parte.trim()).filter(Boolean)
+const igual = (a, b) => a.toLocaleLowerCase('es') === b.toLocaleLowerCase('es')
+
+/** Si el texto ya tiene la opción como una de sus partes separadas por coma. */
+export const tieneAtajo = (texto, opcion) => partes(texto).some((parte) => igual(parte, opcion))
+
+/**
+ * Marca o desmarca una opción dentro del texto: la agrega al final o la quita,
+ * sin tocar lo demás que se haya escrito. Al marcarla, quita su contraria.
+ */
+export const alternarAtajo = (texto, { texto: opcion, contraria }) => {
+  const actuales = partes(texto)
+  if (actuales.some((parte) => igual(parte, opcion))) {
+    return actuales.filter((parte) => !igual(parte, opcion)).join(', ')
+  }
+  return [...actuales.filter((parte) => !contraria || !igual(parte, contraria)), opcion].join(', ')
+}
+
 export const SELLOS = {
   INTACTOS: 'Intactos',
   VIOLADOS: 'Rotos o cortados',
