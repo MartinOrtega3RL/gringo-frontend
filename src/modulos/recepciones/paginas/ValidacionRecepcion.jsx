@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { cargarArchivo } from '../../../api/cliente.js'
 import {
@@ -8,12 +8,14 @@ import {
   confirmarRecepcion,
   rutaImagenComprobante,
 } from '../recepciones.api.js'
+import { darDeBajaProducto } from '../../catalogo/catalogo.api.js'
 import {
   ESTADOS_RECEPCION,
   ORIGENES_RECEPCION,
   TONOS_RECEPCION,
   calcularTotalRecepcion,
   esLecturaDudosa,
+  subtotalImpresoQueNoCoincide,
   todasConProducto,
 } from '../recepciones.reglas.js'
 import { ElegirProducto } from '../../existencias/componentes/ElegirProducto.jsx'
@@ -44,6 +46,9 @@ export const ValidacionRecepcion = () => {
   const [mensajeOk, setMensajeOk] = useState(null)
   const [errorAccion, setErrorAccion] = useState(null)
   const [lineaParaCrear, setLineaParaCrear] = useState(null) // { indice, linea }
+  // Productos dados de alta desde esta pantalla: lo que se crea para una linea y
+  // despues se quita no tiene que quedar en el catalogo.
+  const creadosAca = useRef(new Set())
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -98,14 +103,37 @@ export const ValidacionRecepcion = () => {
     }
   }, [recepcion?.idRecepcion, recepcion?.tieneImagen])
 
+  // Si el producto se creo aca, todavia no se guardo en ninguna linea y ya no lo
+  // usa ninguna, se da de baja. Los que ya estaban guardados los resuelve el
+  // servidor al guardar el borrador.
+  const soltarProducto = async (idProducto, restantes) => {
+    if (!idProducto || !creadosAca.current.has(idProducto)) return
+    if (restantes.some((l) => l.idProducto === idProducto)) return
+    if ((recepcion?.lineas ?? []).some((l) => l.idProducto === idProducto)) return
+
+    creadosAca.current.delete(idProducto)
+    try {
+      await darDeBajaProducto(idProducto)
+      setMensajeOk('Se dio de baja el producto que habías creado para esa línea: lo que se quita no queda en el catálogo.')
+    } catch {
+      // Si no se pudo, el producto queda en el catalogo y se puede dar de baja desde Inventario.
+    }
+  }
+
   const actualizarLinea = (indice, patch) => {
     setMensajeOk(null)
-    setLineas((prev) => prev.map((l, i) => (i === indice ? { ...l, ...patch } : l)))
+    const anterior = lineas[indice]?.idProducto
+    const restantes = lineas.map((l, i) => (i === indice ? { ...l, ...patch } : l))
+    setLineas(restantes)
+    if ('idProducto' in patch && patch.idProducto !== anterior) soltarProducto(anterior, restantes)
   }
 
   const quitarLinea = (indice) => {
     setMensajeOk(null)
-    setLineas((prev) => prev.filter((_, i) => i !== indice))
+    const quitada = lineas[indice]
+    const restantes = lineas.filter((_, i) => i !== indice)
+    setLineas(restantes)
+    soltarProducto(quitada?.idProducto, restantes)
   }
 
   const agregarLinea = () => {
@@ -131,7 +159,12 @@ export const ValidacionRecepcion = () => {
     try {
       const { datos } = await actualizarLineasRecepcion(recepcion.idRecepcion, normalizarLineas())
       setRecepcion(datos)
-      setMensajeOk('Cambios guardados en el borrador.')
+      const bajas = datos.productosDadosDeBaja ?? []
+      setMensajeOk(
+        bajas.length > 0
+          ? `Cambios guardados en el borrador. Se dio de baja lo que quitaste y se había creado para esta recepción: ${bajas.map((p) => p.denominacion).join(', ')}.`
+          : 'Cambios guardados en el borrador.',
+      )
     } catch (fallo) {
       setErrorAccion(fallo.message)
     } finally {
@@ -172,8 +205,9 @@ export const ValidacionRecepcion = () => {
     setErrorAccion(null)
     setMensajeOk(null)
     try {
-      await eliminarRecepcion(recepcion.idRecepcion)
-      navegar('/productos/recepciones')
+      const { datos } = await eliminarRecepcion(recepcion.idRecepcion)
+      // La lista avisa si se dieron de baja productos que solo existian para esta recepcion.
+      navegar('/productos/recepciones', { state: { productosDadosDeBaja: datos?.productosDadosDeBaja ?? [] } })
     } catch (fallo) {
       setErrorAccion(fallo.message)
       setGuardando(false)
@@ -189,6 +223,8 @@ export const ValidacionRecepcion = () => {
   const totalCalculado = calcularTotalRecepcion(lineasNormalizadas)
   const puedeConfirmar = editable && todasConProducto(lineasNormalizadas) && !guardando
   const dudaOcr = esLecturaDudosa(recepcion.extraccion)
+  const impreso = recepcion.totalesComprobante
+  const subtotalDistinto = subtotalImpresoQueNoCoincide(impreso, totalCalculado)
 
   return (
     <div className="grid gap-5">
@@ -217,13 +253,37 @@ export const ValidacionRecepcion = () => {
           </p>
         </div>
 
-        <div className="text-right">
-          <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-crema/60">
-            Total comprobante
-          </span>
-          <span className="numeral font-[family-name:var(--font-cartel)] text-3xl text-ambar">
-            ${pesos(totalCalculado)}
-          </span>
+        <div className="flex flex-wrap items-end justify-end gap-x-8 gap-y-2 text-right">
+          <div>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-crema/60">
+              {impreso?.total != null ? 'Subtotal de las líneas' : 'Total comprobante'}
+            </span>
+            <span
+              className={`numeral font-[family-name:var(--font-cartel)] text-ambar ${
+                impreso?.total != null ? 'text-2xl' : 'text-3xl'
+              }`}
+            >
+              ${pesos(totalCalculado)}
+            </span>
+          </div>
+
+          {impreso?.total != null && (
+            <div>
+              <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-crema/60">
+                Total del comprobante
+              </span>
+              <span className="numeral font-[family-name:var(--font-cartel)] text-3xl text-ambar">
+                ${pesos(impreso.total)}
+              </span>
+              <span className="block text-[11px] text-crema/60">
+                {[
+                  impreso.subtotal != null && `Subtotal $${pesos(impreso.subtotal)}`,
+                  impreso.descuento != null && `Descuento $${pesos(impreso.descuento)}`,
+                  impreso.iva != null && `IVA $${pesos(impreso.iva)}`,
+                ].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -273,6 +333,13 @@ export const ValidacionRecepcion = () => {
             </pre>
           )}
         </div>
+      )}
+
+      {subtotalDistinto !== null && (
+        <Aviso tono="mal">
+          El subtotal impreso en el comprobante (${pesos(subtotalDistinto)}) no coincide con la suma de las líneas
+          (${pesos(totalCalculado)}). Revisá las cantidades y los costos contra la foto.
+        </Aviso>
       )}
 
       {mensajeOk && <Aviso tono="bien">{mensajeOk}</Aviso>}
@@ -485,6 +552,7 @@ export const ValidacionRecepcion = () => {
           setLineaParaCrear(null)
         }}
         alCrearYAsociar={(prod) => {
+          creadosAca.current.add(prod.idProducto)
           actualizarLinea(lineaParaCrear.indice, {
             idProducto: prod.idProducto,
             producto: prod,

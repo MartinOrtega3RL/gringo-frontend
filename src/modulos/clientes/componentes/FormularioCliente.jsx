@@ -3,6 +3,8 @@ import { Dialogo } from '../../../ui/Dialogo.jsx'
 import { Boton } from '../../../ui/Boton.jsx'
 import { Select, Texto, Area, Par } from '../../../ui/Formulario.jsx'
 import { Aviso } from '../../../ui/Estados.jsx'
+import { repartirFallo } from '../../../api/errores-formulario.js'
+import { errorDeCorreo, errorDeWhatsapp } from '../clientes.reglas.js'
 
 // RF13.1, RF13.2, RF13.5 y RF13.6 — alta, modificacion, clasificacion y datos
 // de contacto. Un solo formulario para los dos casos: el alta y la edicion
@@ -73,6 +75,10 @@ export const FormularioCliente = ({ abierto, cliente, tipos, alCerrar, alGuardar
     if (conTipo !== conNumero) {
       fallos.numeroDocumento = 'Si cargás documento, necesito el tipo y el número.'
     }
+    const falloWhatsapp = errorDeWhatsapp(datos.telefonoWhatsapp)
+    if (falloWhatsapp) fallos.telefonoWhatsapp = falloWhatsapp
+    const falloCorreo = errorDeCorreo(datos.correo)
+    if (falloCorreo) fallos.correo = falloCorreo
     setErrores(fallos)
     return Object.keys(fallos).length === 0
   }
@@ -96,7 +102,9 @@ export const FormularioCliente = ({ abierto, cliente, tipos, alCerrar, alGuardar
         observaciones: datos.observaciones.trim() || null,
       })
     } catch (fallo) {
-      setError(fallo.message)
+      const { porCampo, general } = repartirFallo(fallo, Object.keys(VACIO))
+      setErrores(porCampo)
+      setError(general)
       setGuardando(false)
     }
   }
@@ -186,6 +194,7 @@ export const FormularioCliente = ({ abierto, cliente, tipos, alCerrar, alGuardar
             type="tel"
             value={datos.telefonoWhatsapp}
             onChange={cambiar('telefonoWhatsapp')}
+            error={errores.telefonoWhatsapp}
             ayuda="Con el que se le hace el seguimiento."
             maxLength={30}
           />
@@ -194,6 +203,7 @@ export const FormularioCliente = ({ abierto, cliente, tipos, alCerrar, alGuardar
             type="email"
             value={datos.correo}
             onChange={cambiar('correo')}
+            error={errores.correo}
             maxLength={120}
           />
         </Par>
@@ -202,6 +212,7 @@ export const FormularioCliente = ({ abierto, cliente, tipos, alCerrar, alGuardar
           etiqueta="Domicilio"
           value={datos.domicilio}
           onChange={cambiar('domicilio')}
+          error={errores.domicilio}
           maxLength={200}
         />
 
@@ -209,6 +220,7 @@ export const FormularioCliente = ({ abierto, cliente, tipos, alCerrar, alGuardar
           etiqueta="Observaciones"
           value={datos.observaciones}
           onChange={cambiar('observaciones')}
+          error={errores.observaciones}
           maxLength={300}
         />
 

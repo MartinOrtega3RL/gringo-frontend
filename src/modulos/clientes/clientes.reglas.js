@@ -25,3 +25,22 @@ export const destinoInicialFicha = ({ verCompras, verReparaciones }) => {
 export const nombreEquipoHistorial = (equipo) =>
   [equipo?.marca, equipo?.modelo].filter(Boolean).join(' ') || 'Equipo sin identificar'
 
+const RX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const RX_WHATSAPP = /^[\d\s+()\-.]+$/
+
+/** Mensaje si el correo cargado no tiene forma de correo; null si esta bien o vacio. */
+export const errorDeCorreo = (valor) => {
+  const correo = String(valor ?? '').trim()
+  if (!correo) return null
+  return RX_CORREO.test(correo)
+    ? null
+    : 'El correo no tiene un formato válido: tiene que llevar @ y un dominio, por ejemplo nombre@dominio.com.'
+}
+
+/** Mensaje si el WhatsApp tiene letras o muy pocos numeros; null si esta bien o vacio. */
+export const errorDeWhatsapp = (valor) => {
+  const numero = String(valor ?? '').trim()
+  if (!numero) return null
+  if (!RX_WHATSAPP.test(numero)) return 'El WhatsApp solo puede llevar números, espacios, +, guiones y paréntesis.'
+  return numero.replace(/\D/g, '').length >= 6 ? null : 'El WhatsApp tiene que tener al menos 6 números.'
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useListadoPaginado } from '../../../ganchos/useListadoPaginado.js'
 import { listarProveedoresRecepcion, listarRecepciones } from '../recepciones.api.js'
 import {
@@ -13,7 +13,7 @@ import { fechaHora, pesos } from '../../servicio/servicio.reglas.js'
 import { useSesion } from '../../../app/sesion.jsx'
 import { Boton } from '../../../ui/Boton.jsx'
 import { Listado, Fila, Marca } from '../../../ui/Listado.jsx'
-import { Cargando, Vacio, Fallo } from '../../../ui/Estados.jsx'
+import { Cargando, Vacio, Fallo, Aviso } from '../../../ui/Estados.jsx'
 import { IconoMas } from '../../../ui/Iconos.jsx'
 
 const ESTADOS_FILTRO = [
@@ -25,6 +25,7 @@ const ESTADOS_FILTRO = [
 
 export const Recepciones = () => {
   const navegar = useNavigate()
+  const dadosDeBaja = useLocation().state?.productosDadosDeBaja ?? []
   const [parametrosUrl, setParametrosUrl] = useSearchParams()
   const { puedeEscribir } = useSesion()
   const escritura = puedeEscribir('CATALOGO_STOCK')
@@ -70,6 +71,13 @@ export const Recepciones = () => {
 
   return (
     <div className="grid gap-5">
+      {dadosDeBaja.length > 0 && (
+        <Aviso tono="bien">
+          Recepción eliminada. Se dieron de baja {dadosDeBaja.length === 1 ? 'el producto creado' : 'los productos creados'}{' '}
+          solo para ella, que no tenían stock ni historia: {dadosDeBaja.map((p) => p.denominacion).join(', ')}.
+        </Aviso>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {ESTADOS_FILTRO.map(([valor, texto]) => (

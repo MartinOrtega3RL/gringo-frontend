@@ -32,6 +32,19 @@ export const calcularTotalRecepcion = (lineas = []) => {
   return centavos / 100
 }
 
+/**
+ * El subtotal impreso en el comprobante contra la suma de las lineas cargadas.
+ * Devuelve el subtotal impreso si difiere en mas de un centavo, o null si
+ * coinciden o si el comprobante no trae subtotal. Una diferencia es una linea
+ * mal leida o mal cargada, no un cambio en el total: el descuento y el IVA se
+ * aplican despues del subtotal.
+ */
+export const subtotalImpresoQueNoCoincide = (totalesComprobante, sumaLineas) => {
+  const impreso = totalesComprobante?.subtotal
+  if (impreso === null || impreso === undefined) return null
+  return Math.abs(impreso - sumaLineas) > 0.01 ? impreso : null
+}
+
 export const todasConProducto = (lineas = []) =>
   lineas.length > 0 &&
   lineas.every((l) => Boolean(l.idProducto) && Number(l.cantidad) >= 1 && Number(l.precioCosto) >= 0)

@@ -3,6 +3,8 @@ import { Dialogo } from '../../../ui/Dialogo.jsx'
 import { Boton } from '../../../ui/Boton.jsx'
 import { Select, Texto, Area, Par } from '../../../ui/Formulario.jsx'
 import { Aviso } from '../../../ui/Estados.jsx'
+import { repartirFallo } from '../../../api/errores-formulario.js'
+import { errorDeCorreo, errorDeWhatsapp } from '../../clientes/clientes.reglas.js'
 
 // RF15.1 — alta y modificación de un proveedor.
 //
@@ -75,6 +77,11 @@ export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alG
       fallos.numeroDocumento = 'Si cargás documento, necesito el tipo y el número.'
     }
 
+    const falloWhatsapp = errorDeWhatsapp(datos.telefonoWhatsapp)
+    if (falloWhatsapp) fallos.telefonoWhatsapp = falloWhatsapp
+    const falloCorreo = errorDeCorreo(datos.correo)
+    if (falloCorreo) fallos.correo = falloCorreo
+
     setErrores(fallos)
     return Object.keys(fallos).length === 0
   }
@@ -97,7 +104,9 @@ export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alG
         observaciones: datos.observaciones.trim() || null,
       })
     } catch (fallo) {
-      setError(fallo.message)
+      const { porCampo, general } = repartirFallo(fallo, Object.keys(VACIO))
+      setErrores(porCampo)
+      setError(general)
       setGuardando(false)
     }
   }
@@ -145,6 +154,7 @@ export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alG
             type="tel"
             value={datos.telefonoWhatsapp}
             onChange={cambiar('telefonoWhatsapp')}
+            error={errores.telefonoWhatsapp}
             maxLength={30}
             ayuda="Por donde se le hace el pedido."
           />
@@ -174,6 +184,7 @@ export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alG
             type="email"
             value={datos.correo}
             onChange={cambiar('correo')}
+            error={errores.correo}
             maxLength={120}
           />
           {/* H14: algunos pedidos se cursan por la web del proveedor. */}
@@ -182,6 +193,7 @@ export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alG
             type="url"
             value={datos.sitioWeb}
             onChange={cambiar('sitioWeb')}
+            error={errores.sitioWeb}
             maxLength={200}
             placeholder="https://"
           />
@@ -191,6 +203,7 @@ export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alG
           etiqueta="Domicilio"
           value={datos.domicilio}
           onChange={cambiar('domicilio')}
+          error={errores.domicilio}
           maxLength={200}
         />
 
@@ -198,6 +211,7 @@ export const FormularioProveedor = ({ abierto, proveedor, inicial, alCerrar, alG
           etiqueta="Observaciones"
           value={datos.observaciones}
           onChange={cambiar('observaciones')}
+          error={errores.observaciones}
           maxLength={300}
           ayuda="Días de reparto, condiciones, lo que convenga recordar."
         />
