@@ -9,7 +9,11 @@ export const buscarRecepcion = (idRecepcion) => api.obtener(`/recepciones/${idRe
 
 export const crearRecepcionManual = (datos) => api.enviar('/recepciones', datos)
 
-export const crearRecepcionOcr = (formulario) => api.subir('/recepciones/ocr', formulario)
+// Paso 1 de la recepcion con foto: sube la imagen y devuelve lo que leyo el OCR.
+export const analizarComprobante = (formulario) => api.subir('/recepciones/ocr/analizar', formulario)
+
+// Paso 2: crea la recepcion con lo que se confirmo; la foto ya esta en el servidor.
+export const crearRecepcionOcr = (datos) => api.enviar('/recepciones/ocr', datos)
 
 export const actualizarLineasRecepcion = (idRecepcion, lineas) =>
   api.modificar(`/recepciones/${idRecepcion}/lineas`, { lineas })
